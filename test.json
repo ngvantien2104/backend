@@ -1,0 +1,51 @@
+{
+    "_id": "650924f17c3974d8da8d3191",
+    "appID": "3",
+    "applicationName": "smartbuilding",
+    "deviceName": "BUI-GPS",
+    "deviceProfileName": "Dust_GPS",
+    "deviceProfileID": "74f4b1f7-7519-464a-b5bf-f9ac7d97c007",
+    "devEUI": "645c2f483d650dc6",
+    "rxInfo": [
+      [
+        {
+          "gatewayID": "ac1f09fffe00ab0a",
+          "rssi": -106,
+          "loRaSNR": 6.3,
+          "location": {
+            "longitude": 108.15341,
+            "latitude": 16.07524,
+            "altitude": 66
+          },
+          "uplinkID": "e1bb39ac-1d12-452a-a7d2-e37e72607437"
+        }
+      ]
+    ],
+    "txInfo": {
+      "frequency": 921400000,
+      "loRaModulationInfo": {
+        "bandwidth": 0,
+        "spreadingFactor": 0,
+        "codeRate": "String"
+      }
+    },
+    "fCnt": 1,
+    "fPort": 1,
+    "data": "AAAAAMqaOwDKmjs=",
+    "objectJSON": {
+      "data": {
+        "Dust": {
+          "pm10_ug/m3": 0,
+          "pm1_ug/m3": 0,
+          "pm25_ug/m3": 0
+        },
+        "Location": {
+          "latitude": 1000,
+          "longitude": 1000
+        }
+      }
+    },
+    "devAddr": "String",
+    "confirmUplink": true,
+    "__v": 0
+  }
