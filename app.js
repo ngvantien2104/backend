@@ -9,16 +9,52 @@ const cors = require("cors");
 const { Server } = require ("socket.io");
 const server = http.createServer(app);
 const geojsonUtils = require('./function');
+const mqtt = require('mqtt')
+
+
+
 
 const io = new Server(server, {
   cors: {
-      origin: "http://localhost:3000",
-      methods: ["GET","POST"],
+      origin: "*"
   }
 })
-server.listen(30010, () => {
+
+server.listen(3001, () => {
   console.log("server running")
 });
+
+io.on("connection", (socket, message) => {
+  console.log("a user connect")
+  io.emit("welcome", "testing socket")
+  socket.on("disconnect", () => {
+      console.log("a user disconnected!")
+
+  })
+})
+const getData = (message) => io.emit(`realtime`, { payload: message })
+
+const client = mqtt.connect("mqtt://45.117.83.198:1883");
+let topic = 'application/3/device/645c2f483d650dc6/event/up'
+client.on("connect", () => {
+  console.log('connected')
+  client.subscribe(topic, (err)=>{
+    if(err){
+      console.log(err)
+    }
+  })
+});
+
+
+
+client.on("message",(topic, message) => {
+  // message is Buffer
+  getData(JSON.stringify(message))
+  console.log(`this message:${message}`);
+  // client.end();`
+});
+
+
 let db
 connectToDb((err)=>{
     if(!err){
@@ -39,13 +75,21 @@ let  datas;
 //   console.log('Kết nối thành công đến MongoDB');
 // });
 
-io.on('connection', (socket) => {
-  console.log('A user connected');
-  setInterval(sendApiCalledEvent, 60000); 
-  socket.on('disconnect', () => {
-      console.log('A user disconnected');
-  });
-});
+
+//socket
+// io.on('connection', (socket) => {
+//   console.log('A user connected');
+//   setInterval(sendApiCalledEvent, 60000); 
+//   socket.on('disconnect', () => {
+//       console.log('A user disconnected');
+//   });
+// });
+
+
+setInterval(sendApiCalledEvent, 60000); 
+
+
+
 const otherDb = mongoose.connection;
 mongoose.connect('mongodb://localhost:27017/airMain', {
   useNewUrlParser: true,
@@ -58,11 +102,6 @@ otherDb.on('error', (error) => {
 otherDb.once('open', () => {
   console.log('Kết nối đến cơ sở dữ liệu khác thành công');
 });
-
-
-
-
-
 
 
 
@@ -84,8 +123,10 @@ const dataSchema = new mongoose.Schema({
         }
       }
     },
-   
-  
+   "rxInfo":[{
+    "gatewayID":String,
+    "rssi":String,
+   }]
 }
 );
 
@@ -93,6 +134,25 @@ const DataModel = mongoose.model('Data', dataSchema);
 
 // Khai báo biến để theo dõi xem hàm đã được gọi tự động hay chưa
 let isAutoRunning = false;
+const AirQualityModel = mongoose.model('Data', dataSchema);
+
+const getAllAirQualityData = async()=>{
+  let airQualityData
+  try {
+   
+    airQualityData = await AirQualityModel.find({});
+    return airQualityData // Lấy tất cả dữ liệu trong collection AirQuality
+    // console.log(airQualityData);
+  } catch (error) {
+    console.error('Lỗi truy xuất dữ liệu:', error);
+  }
+  return airQualityData
+}
+
+// Gọi hàm để lấy tất cả dữ liệu
+getAllAirQualityData();
+
+
 
 async function performTaskAndSaveToOtherDb() {
   if (!isAutoRunning) {
@@ -120,22 +180,46 @@ async function performTaskAndSaveToOtherDb() {
         if (doc && doc.data && doc.data.length > 0) {
           // Lấy dữ liệu đầu tiên từ mảng data
           const dataItem = doc.data[0];  
-          console.log(doc) 
-          // Xóa trường _id
-          delete dataItem._id;
-          const newData = new DataModel(dataItem);
+          console.log(dataItem) 
+          // // Xóa trường _id
+          // delete dataItem._id;
+          // const newData = new DataModel(dataItem);
           
-          await newData.save();
-           const testdb= DataModel.find({})
-            .then((result) => {
-              console.log('Dữ liệu từ truy vấn findOne:', result);
-            })
-            .catch((error) => {
-              console.error('Lỗi khi lấy dữ liệu:', error);
-            })
-          datas =testdb;
-          console.log(testdb)
-          console.log('Dữ liệu đã được ghi lên cơ sở dữ liệu khác');
+          // await newData.save();
+          // const testdb= DataModel.find({})
+          //   .then((result) => {
+          //     console.log('Dữ liệu từ truy vấn findOne:', result);
+          //   })
+          //   .catch((error) => {
+          //     console.error('Lỗi khi lấy dữ liệu:', error);
+          //   })
+          // datas =testdb;
+          // console.log(testdb)
+          // console.log('Dữ liệu đã được ghi lên cơ sở dữ liệu khác');
+                
+          //Tìm dữ liệu cuối cùng trong cơ sở dữ liệu
+          const lastData = await DataModel.findOne().sort({ _id: -1 });
+
+          if (lastData && lastData.timeSystem === dataItem.timeSystem) {
+            console.log('Dữ liệu cuối cùng trùng với timeSystem, không gửi lên.');
+          } else {
+            console.log('Dữ liệu cuối cùng không trùng với timeSystem, tiến hành lưu dữ liệu và gửi lên.');
+            // Xóa trường _id
+            delete dataItem._id;
+            const newData = new DataModel({
+              timeSystem:dataItem.timeSystem,
+              objectJSON:dataItem.objectJSON,
+              rxInfo:dataItem.rxInfo.map((val)=>{
+                return {
+                  gatewayID:val.gatewayID,
+                  rssi:val.rssi
+                }
+              })
+            });
+            // Thực hiện lưu newData vào cơ sở dữ liệu
+            await newData.save();
+            console.log('Dữ liệu đã được ghi lên cơ sở dữ liệu khác');
+          }
         } else {
           console.log('Không tìm thấy dữ liệu');
         }
@@ -152,8 +236,8 @@ async function performTaskAndSaveToOtherDb() {
 // // Sử dụng setInterval để tự động gọi hàm performTaskAndSaveToOtherDb mỗi 1 phút (60,000 milliseconds)
 function sendApiCalledEvent() {
   performTaskAndSaveToOtherDb();
-  io.emit('test', 'API đã được gọi');
-  console.log("test da dươc gui")
+
+ 
 }
 
 
@@ -177,12 +261,20 @@ function sendApiCalledEvent() {
 // } else {
 //   console.log(`Điểm ${pointToCheck} nằm ngoài vùng.`);
 // }
-
-
-
 //  //test đếm số điểm trong 1 vùng , khi hoàn thiện thì xóa phần này 
-app.get('/data',(req,res)=>{
- 
+
+
+
+
+
+
+
+
+
+
+app.get('/data',async(req,res)=>{
   
-  res.json({mssg: "test"})
+  const temp = await getAllAirQualityData()
+  console.log(`this is temp :${temp}`)
+  res.json({mssg: temp})
 })
