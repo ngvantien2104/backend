@@ -91,7 +91,7 @@ setInterval(sendApiCalledEvent, 60000);
 
 
 const otherDb = mongoose.connection;
-mongoose.connect('mongodb+srv://ngvantien2104:tien2104@cluster0.2frs9at.mongodb.net/airMain', {
+mongoose.connect('mongodb://localhost:27017/airMain', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -157,13 +157,32 @@ const getOnehourAirQualityData = async () => {
   let airQualityData;
   try {
     // Sử dụng phương thức find để lấy tất cả dữ liệu và sắp xếp theo thời gian giảm dần
-    airQualityData = await AirQualityModel.find().sort({ _id: -1 }).limit(400);
+    airQualityData = await AirQualityModel.find().sort({ _id: -1 }).limit(60 );
     return airQualityData; // Lấy 60 dữ liệu cuối cùng
   } catch (error) {
     console.error('Lỗi truy xuất dữ liệu:', error);
   }
   return airQualityData;
 }
+
+
+
+
+const getOneDayAirQualityData = async () => {
+  let airQualityData;
+  try {
+    // Sử dụng phương thức find để lấy tất cả dữ liệu và sắp xếp theo thời gian giảm dần
+    airQualityData = await AirQualityModel.find().sort({ _id: -1 }).limit(300 );
+    return airQualityData; // Lấy 60 dữ liệu cuối cùng
+  } catch (error) {
+    console.error('Lỗi truy xuất dữ liệu:', error);
+  }
+  return airQualityData;
+}
+
+
+
+
 async function performTaskAndSaveToOtherDb() {
   if (!isAutoRunning) {
     isAutoRunning = true;
@@ -247,6 +266,21 @@ app.get('/data',async(req,res)=>{
   console.log(`this is temp :${temp}`)
   res.json({mssg: temp})
 })
+app.get('/one',async(req,res)=>{ 
+  if (!isDataUpdated) {
+    try {
+      const temp = await getOnehourAirQualityData();
+      isDataUpdated = true;
+      console.log(`Dữ liệu đã được cập nhật: ${temp}`);
+      res.json({ mssg: temp });
+    } catch (error) {
+      console.error('Lỗi truy xuất dữ liệu:', error);
+      res.status(500).json({ error: 'Lỗi truy xuất dữ liệu' });
+    }
+  } else {
+    res.status(304).json({ message: 'Dữ liệu không thay đổi' });
+  }
+})
 
 let isDataUpdated = false;
 
@@ -265,3 +299,19 @@ app.get('/onehour', async (req, res) => {
     res.status(304).json({ message: 'Dữ liệu không thay đổi' });
   }
 });
+app.get('/oneday', async (req, res) => {
+  if (!isDataUpdated) {
+    try {
+      const temp = await getOneDayAirQualityData();
+      isDataUpdated = true;
+      console.log(`Dữ liệu đã được cập nhật: ${temp}`);
+      res.json({ mssg: temp });
+    } catch (error) {
+      console.error('Lỗi truy xuất dữ liệu:', error);
+      res.status(500).json({ error: 'Lỗi truy xuất dữ liệu' });
+    }
+  } else {
+    res.status(304).json({ message: 'Dữ liệu không thay đổi' });
+  }
+});
+
