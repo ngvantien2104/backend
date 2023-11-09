@@ -136,49 +136,35 @@ const DataModel = mongoose.model('Data', dataSchema);
 let isAutoRunning = false;
 const AirQualityModel = mongoose.model('Data', dataSchema);
 
-const getAllAirQualityData = async()=>{
-  let airQualityData
+async function fetchData(limit = 1) {
   try {
+    const airQualityData = await AirQualityModel.find({}).limit(limit).sort({ _id: -1 }).exec();
    
-    airQualityData = await AirQualityModel.find({});
-    return airQualityData // Lấy tất cả dữ liệu trong collection AirQuality
-    // console.log(airQualityData);
+    return airQualityData;
   } catch (error) {
     console.error('Lỗi truy xuất dữ liệu:', error);
+    throw error; // Chuyển lại lỗi để xử lý ở phía calling code nếu cần
   }
-  return airQualityData
 }
-
-// Gọi hàm để lấy tất cả dữ liệu
-getAllAirQualityData();
-
-
-const getOnehourAirQualityData = async () => {
-  let airQualityData;
+app.use(cors());
+app.get('/oneday', async (req, res) => {
   try {
-    // Sử dụng phương thức find để lấy tất cả dữ liệu và sắp xếp theo thời gian giảm dần
-    airQualityData = await AirQualityModel.find().sort({ _id: -1 }).limit(60 );
-    return airQualityData; // Lấy 60 dữ liệu cuối cùng
+    const result = await fetchData(300); // Thay 5 bằng giá trị limit mong muốn
+    res.json(result);
   } catch (error) {
-    console.error('Lỗi truy xuất dữ liệu:', error);
+    console.error('Lỗi khi xử lý yêu cầu:', error);
+    res.status(500).json({ error: 'Lỗi khi xử lý yêu cầu' });
   }
-  return airQualityData;
-}
-
-
-
-
-const getOneDayAirQualityData = async () => {
-  let airQualityData;
+});
+app.get('/onehour', async (req, res) => {
   try {
-    // Sử dụng phương thức find để lấy tất cả dữ liệu và sắp xếp theo thời gian giảm dần
-    airQualityData = await AirQualityModel.find().sort({ _id: -1 }).limit(300 );
-    return airQualityData; // Lấy 60 dữ liệu cuối cùng
+    const result = await fetchData(60); // Thay 5 bằng giá trị limit mong muốn
+    res.json(result);
   } catch (error) {
-    console.error('Lỗi truy xuất dữ liệu:', error);
+    console.error('Lỗi khi xử lý yêu cầu:', error);
+    res.status(500).json({ error: 'Lỗi khi xử lý yêu cầu' });
   }
-  return airQualityData;
-}
+});
 
 
 
@@ -250,68 +236,8 @@ async function performTaskAndSaveToOtherDb() {
 function sendApiCalledEvent() {
   performTaskAndSaveToOtherDb();
 
- 
 }
 
 
 
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  next();
-});
-app.get('/data',async(req,res)=>{ 
-  const temp = await getAllAirQualityData()
-  console.log(`this is temp :${temp}`)
-  res.json({mssg: temp})
-})
-app.get('/one',async(req,res)=>{ 
-  if (!isDataUpdated) {
-    try {
-      const temp = await getOnehourAirQualityData();
-      isDataUpdated = true;
-      console.log(`Dữ liệu đã được cập nhật: ${temp}`);
-      res.json({ mssg: temp });
-    } catch (error) {
-      console.error('Lỗi truy xuất dữ liệu:', error);
-      res.status(500).json({ error: 'Lỗi truy xuất dữ liệu' });
-    }
-  } else {
-    res.status(304).json({ message: 'Dữ liệu không thay đổi' });
-  }
-})
-
-let isDataUpdated = false;
-
-app.get('/onehour', async (req, res) => {
-  if (!isDataUpdated) {
-    try {
-      const temp = await getOnehourAirQualityData();
-      isDataUpdated = true;
-      console.log(`Dữ liệu đã được cập nhật: ${temp}`);
-      res.json({ mssg: temp });
-    } catch (error) {
-      console.error('Lỗi truy xuất dữ liệu:', error);
-      res.status(500).json({ error: 'Lỗi truy xuất dữ liệu' });
-    }
-  } else {
-    res.status(304).json({ message: 'Dữ liệu không thay đổi' });
-  }
-});
-app.get('/oneday', async (req, res) => {
-  if (!isDataUpdated) {
-    try {
-      const temp = await getOneDayAirQualityData();
-      isDataUpdated = true;
-      console.log(`Dữ liệu đã được cập nhật: ${temp}`);
-      res.json({ mssg: temp });
-    } catch (error) {
-      console.error('Lỗi truy xuất dữ liệu:', error);
-      res.status(500).json({ error: 'Lỗi truy xuất dữ liệu' });
-    }
-  } else {
-    res.status(304).json({ message: 'Dữ liệu không thay đổi' });
-  }
-});
 
