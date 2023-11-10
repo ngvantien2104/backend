@@ -149,7 +149,7 @@ async function fetchData(limit = 1) {
 app.use(cors());
 app.get('/oneday', async (req, res) => {
   try {
-    const result = await fetchData(300); // Thay 5 bằng giá trị limit mong muốn
+    const result = await fetchData(500); // Thay 5 bằng giá trị limit mong muốn
     res.json(result);
   } catch (error) {
     console.error('Lỗi khi xử lý yêu cầu:', error);
@@ -158,7 +158,7 @@ app.get('/oneday', async (req, res) => {
 });
 app.get('/onehour', async (req, res) => {
   try {
-    const result = await fetchData(60); // Thay 5 bằng giá trị limit mong muốn
+    const result = await fetchData(50); // Thay 5 bằng giá trị limit mong muốn
     res.json(result);
   } catch (error) {
     console.error('Lỗi khi xử lý yêu cầu:', error);
